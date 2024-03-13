@@ -1,0 +1,44 @@
+version: '3.7'
+services:
+  apiexample:
+    build: .
+    image: apiexample:dev
+    container_name: apiexample.dev
+    tty: true
+    stdin_open: true
+    restart: always
+    ports:
+      - 8000:8000
+    volumes:
+      - ./apie_example:/app
+    depends_on:
+      - db
+    links:
+      - db:postgres
+    env_file:
+      - .env
+    command: >
+      bash -c "python wait_for_postgres.py &&
+               python manage.py migrate &&
+               python manage.py collectstatic --noinput &&
+               gunicorn apie_example.wsgi --bind 0.0.0.0:8000"
+  db:
+    image: postgres
+    container_name: apiexample.db
+    restart: always
+    ports:
+      - 5432:5432
+    volumes:
+      - ./dbdata:/var/lib/postgresql/data
+    env_file:
+      - .env
+  nginx:
+    build: ./nginx/
+    image: nginx:apiexample
+    container_name: apiexample.nginx
+    restart: always
+    ports:
+      - 80:80
+    volumes:
+      - ./apie_example/media:/app/media
+      - ./apie_example/static:/app/static
